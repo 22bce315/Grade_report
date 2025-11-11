@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Grade Predictor — Enhanced UI</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --accent:#5b8cff;
+      --accent-dark:#3a63d6;
+      --muted:#6c757d;
+      --card-bg: #ffffff;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg, #f6f9ff 0%, #ffffff 100%);
+      padding-top: 88px;
+    }
+    .navbar-brand { font-weight:700; letter-spacing:0.2px; }
+    .app-card { border-radius:14px; box-shadow:0 10px 30px rgba(34,41,47,0.08); }
+    .table thead th { vertical-align: middle; }
+    td input { border: none; background: transparent; width:100%; padding:6px 8px; }
+    td input:focus { outline: none; background: rgba(91,140,255,0.06); border-radius:6px; box-shadow: 0 0 0 2px rgba(91,140,255,0.08); }
+    .toast-container { position: fixed; top: 90px; right: 20px; z-index: 99999; max-width: 360px; }
+    .icon-btn { width:38px; height:38px; display:inline-grid; place-items:center; border-radius:9px; }
+    .actions-col { width:110px; }
+    .header-gradient { background: linear-gradient(90deg, var(--accent), var(--accent-dark)); color:#fff; border-radius:12px; padding:16px; }
+    .small-muted { font-size:0.85rem; color:var(--muted); }
+    #results .table td input { background:transparent; }
+    .spinner-overlay { display:flex; gap:10px; align-items:center; justify-content:center; height:120px; }
+    .btn-ghost { background: transparent; border: 1px solid rgba(16,24,40,0.04); }
+    @media (max-width:720px){
+      .actions-col { width:auto; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg fixed-top" style="background:#0f1724;">
+  <div class="container">
+    <a class="navbar-brand text-white" href="#"><i class="bi bi-mortarboard-fill me-2"></i>Grade Predictor</a>
+    <div class="ms-auto d-flex gap-2">
+      <button id="exportCsvBtn" class="btn btn-outline-light btn-sm d-none"><i class="bi bi-download me-1"></i>Export CSV</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container my-4">
+  <div class="row g-4">
+    <!-- Input Card -->
+    <div class="col-12">
+      <div class="app-card p-4 bg-white">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h4 class="mb-0">Input Subjects</h4>
+            <div class="small-muted">Add subject rows, edit values and predict grades.</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <div class="me-2">
+              <label class="small-muted mb-1">From</label>
+              <select id="fromGrade" class="form-select form-select-sm">
+                  <option value="C">C</option><option value="C+">C+</option><option value="B">B</option>
+                  <option value="B+">B+</option><option value="A">A</option><option value="A+">A+</option>
+                  <option value="O">O</option>
+              </select>
+            </div>
+
+            <div class="me-2">
+              <label class="small-muted mb-1">To</label>
+              <select id="toGrade" class="form-select form-select-sm">
+                  <option value="C">C</option><option value="C+">C+</option><option value="B">B</option>
+                  <option value="B+">B+</option><option value="A">A</option><option value="A+">A+</option>
+                  <option value="O" selected>O</option>
+              </select>
+            </div>
+
+            <div class="align-self-end">
+              <button id="submitTable" class="btn btn-primary btn-sm">
+                <i class="bi bi-graph-up me-1"></i> Predict Grades
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-borderless align-middle" id="inputTable">
+            <thead class="small text-muted">
+              <tr class="text-uppercase small">
+                <th style="min-width:200px">Subject</th>
+                <th>CT</th>
+                <th>Sessional</th>
+                <th>Assignment</th>
+                <th>Index</th>
+                <th>Practical</th>
+                <th>Has LPW</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="d-flex gap-2 mt-2">
+          <button id="addRow" class="btn btn-success btn-sm"><i class="bi bi-plus-lg me-1"></i> Add Row</button>
+          <button id="addExample" class="btn btn-ghost btn-sm"><i class="bi bi-lightning-fill me-1"></i> Add Example Rows</button>
+          <button id="clearAll" class="btn btn-outline-danger btn-sm ms-auto"><i class="bi bi-trash me-1"></i> Clear All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Card -->
+    <div class="col-12">
+      <div class="app-card p-3 bg-white">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h5 class="mb-0">Results</h5>
+            <div class="small-muted">Editable results table — click Export CSV to download.</div>
+          </div>
+          <div>
+            <button id="clearResults" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-circle me-1"></i> Clear Results</button>
+          </div>
+        </div>
+
+        <div id="results">
+          <div class="text-muted small">No results yet. Click <strong>Predict Grades</strong> to compute predictions.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container"></div>
+
+<!-- Templates (hidden) -->
+<template id="inputRowTpl">
+  <tr>
+    <td><input class="form-control form-control-sm subject" placeholder="Subject name (e.g., MLops)"></td>
+    <td><input type="number" min="0" max="100" class="form-control form-control-sm ct" value="0"></td>
+    <td><input type="number" min="0" max="100" class="form-control form-control-sm sessional" value="0"></td>
+    <td><input type="number" min="0" max="100" class="form-control form-control-sm assignment" value="0"></td>
+    <td><input type="number" min="0" max="100" class="form-control form-control-sm index" value="0"></td>
+    <td><input type="number" min="0" max="100" class="form-control form-control-sm practical" value="0"></td>
+    <td><select class="form-select form-select-sm has_lpw"><option value="0">0</option><option value="1">1</option></select></td>
+    <td class="text-end actions-col">
+      <div class="d-flex justify-content-end gap-2">
+        <button class="btn btn-outline-danger btn-sm deleteRow" title="Delete row"><i class="bi bi-trash"></i></button>
+      </div>
+    </td>
+  </tr>
+</template>
+
+<!-- JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+$(function(){
+
+  // Utility: show toast (removes older toasts if too many)
+  function showToast(message, type='success', keep=false){
+    const id = 't' + Date.now();
+    const toast = $(`
+      <div id="${id}" class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    `);
+    const container = $('.toast-container');
+    container.append(toast);
+    const bsToast = new bootstrap.Toast(document.getElementById(id), { delay: 3800 });
+    bsToast.show();
+
+    // Keep max 3 toasts
+    if(!keep){
+      const all = container.children('.toast');
+      if(all.length > 3) $(all[0]).remove();
+    }
+  }
+
+  // Add a row (using template)
+  function addRow(data){
+    const tpl = $($('#inputRowTpl').html());
+    if(data){
+      tpl.find('.subject').val(data.subjects || '');
+      tpl.find('.ct').val(data.ct ?? 0);
+      tpl.find('.sessional').val(data.sessional ?? 0);
+      tpl.find('.assignment').val(data.assignment ?? 0);
+      tpl.find('.index').val(data.index ?? 0);
+      tpl.find('.practical').val(data.practical ?? 0);
+      tpl.find('.has_lpw').val(data.has_lpw ?? 0);
+    }
+    $('#inputTable tbody').append(tpl);
+    return tpl;
+  }
+
+  // Remove all input rows
+  function clearRows(){
+    $('#inputTable tbody').empty();
+  }
+
+  // Export results table to CSV
+  function exportResultsCSV(){
+    const rows = [];
+    const $table = $('#results table');
+    if(!$table.length) { showToast('No result to export', 'warning'); return; }
+    $table.find('thead tr th').each(function(i,th){ rows[0] = (rows[0]||[]); rows[0].push($(th).text().trim()); });
+    $table.find('tbody tr').each(function(r,tr){
+      rows[r+1] = [];
+      $(tr).find('td').each(function(c,td){
+        const input = $(td).find('input, select');
+        rows[r+1].push(input.length ? input.val() : $(td).text().trim());
+      });
+    });
+    const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grade_predictions.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // Build results table (replaces previous)
+  function renderResults(response){
+    // Response is assumed to be array of objects with 'subjects' key
+    if(!Array.isArray(response) || response.length === 0){
+      $('#results').html('<div class="text-muted small">No data returned from server.</div>');
+      $('#exportCsvBtn').addClass('d-none');
+      return;
+    }
+
+    // create headers from keys (subjects first)
+    const keys = Object.keys(response[0]);
+    const headers = ['subjects', ...keys.filter(k=>k!=='subjects')];
+
+    let thead = '<tr>';
+    headers.forEach(h => thead += `<th>${h}</th>`);
+    thead += '</tr>';
+
+    let tbody = '';
+    response.forEach(row => {
+      tbody += '<tr>';
+      headers.forEach(k => {
+        const v = (row[k] === null || row[k] === undefined) ? '' : row[k];
+        tbody += `<td><input class="form-control form-control-sm" value="${String(v).replace(/"/g,'&quot;')}"></td>`;
+      });
+      tbody += '</tr>';
+    });
+
+    const table = `
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+          <thead class="table-light">${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+      <div class="d-flex gap-2 mt-2">
+        <button id="saveChanges" class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i> Save Edits</button>
+        <button id="exportCsv" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Export CSV</button>
+      </div>
+    `;
+
+    $('#results').html(table);
+    $('#exportCsvBtn').removeClass('d-none');
+
+    // attach local handlers for Export & Save
+    $('#exportCsv').off('click').on('click', exportResultsCSV);
+    $('#saveChanges').off('click').on('click', function(){
+      showToast('Edits saved locally (not sent to server).', 'success');
+    });
+  }
+
+  // prepare initial state
+  clearRows();
+  addRow({subjects:'SPM', ct:37, sessional:62, assignment:61, index:36, practical:87, has_lpw:0});
+  addRow({subjects:'MLops', ct:41, sessional:66, assignment:66, index:41, practical:91, has_lpw:1});
+
+  // UI buttons
+  $('#addRow').on('click', ()=> addRow());
+  $('#addExample').on('click', ()=>{
+    addRow({subjects:'IRS', ct:41, sessional:66, assignment:66, index:41, practical:91, has_lpw:0});
+    addRow({subjects:'PCD', ct:46, sessional:71, assignment:70, index:45, practical:96, has_lpw:1});
+  });
+
+  $('#clearAll').on('click', ()=>{
+    if(confirm('Clear all input rows?')) clearRows();
+  });
+
+  $(document).on('click', '.deleteRow', function(){
+    $(this).closest('tr').remove();
+  });
+
+  $('#clearResults').on('click', function(){
+    $('#results').html('<div class="text-muted small">No results yet. Click <strong>Predict Grades</strong>.</div>');
+    $('#exportCsvBtn').addClass('d-none');
+  });
+
+  $('#exportCsvBtn').on('click', exportResultsCSV);
+
+  // Submit / Predict
+  let pending = false;
+  $('#submitTable').on('click', function(){
+    if(pending) return;
+    // gather data
+    const data = [];
+    $('#inputTable tbody tr').each(function(){
+      const $r = $(this);
+      data.push({
+        subjects: $r.find('.subject').val().trim(),
+        ct: parseFloat($r.find('.ct').val()) || 0,
+        sessional: parseFloat($r.find('.sessional').val()) || 0,
+        assignment: parseFloat($r.find('.assignment').val()) || 0,
+        index: parseFloat($r.find('.index').val()) || 0,
+        practical: parseFloat($r.find('.practical').val()) || 0,
+        has_lpw: parseInt($r.find('.has_lpw').val()) || 0
+      });
+    });
+
+    // always clear previous results immediately to prevent appending behavior
+    $('#results').html(`<div class="spinner-overlay"><div class="spinner-border" role="status" aria-hidden="true"></div><div class="small text-muted">Predicting — please wait...</div></div>`);
+    $('#exportCsvBtn').addClass('d-none');
+
+    const from_grade = $('#fromGrade').val();
+    const to_grade = $('#toGrade').val();
+
+    // disable button while pending
+    pending = true;
+    $('#submitTable').prop('disabled', true).html(`<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Predicting...`);
+
+    // AJAX call
+    $.ajax({
+      url: `/predict?from_grade=${encodeURIComponent(from_grade)}&till_grade=${encodeURIComponent(to_grade)}`,
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(data),
+      success: function(response){
+        // Replace results with new table (renderResults handles empty too)
+        renderResults(response);
+        showToast('Grades calculated successfully!', 'success');
+      },
+      error: function(err){
+        console.error(err);
+        $('#results').html('<div class="text-danger small">Error while calculating grades. See console for details.</div>');
+        showToast('Error calculating grades', 'danger');
+      },
+      complete: function(){
+        pending = false;
+        $('#submitTable').prop('disabled', false).html(`<i class="bi bi-graph-up me-1"></i> Predict Grades`);
+      },
+      timeout: 30000
+    });
+  });
+
+  // keyboard-friendly: Enter on last input adds new row
+  $(document).on('keydown', '#inputTable tbody tr:last-child input', function(e){
+    if(e.key === 'Enter'){
+      addRow();
+      $('#inputTable tbody tr:last-child .subject').focus();
+      e.preventDefault();
+    }
+  });
+
+});
+</script>
+</body>
+</html>
